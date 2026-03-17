@@ -1,10 +1,12 @@
 # SpDown
-CLI for downloading spotify songs through YouTube using Spotify API and yt_dlp library.
+CLI for downloading Spotify <b>songs</b> and <b>playlists</b> through YouTube using Spotify API and yt_dlp library.
+
 it also allows you to download from YouTube directly.
 
 <img width="886" height="300" alt="Captura de pantalla 2026-03-17 133148" src="https://github.com/user-attachments/assets/986f437d-c539-4498-b6ad-5a647f4818e1" />
 
 To download spotify songs, it fetches their data from the Spotify api and then querys YouTube with yt_dlp. 
+
 
 # Requirements
 Python libraries:
