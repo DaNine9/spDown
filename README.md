@@ -5,14 +5,9 @@ ITS EASY TO INSTALL AND USE
 
 It allows you to input a Spotify or YouTube URL or Song Name, and itll find the best yt video match to download automatically to your music folder.
 To download spotify songs, it fetches their data from the Spotify api and then querys YouTube with yt_dlp. 
+
+
 <img width="821" height="284" alt="image" src="https://github.com/user-attachments/assets/aed077b0-c0b1-43f4-b41f-5a8a444c7eb2" />
-
-  # Dowload
-DONWLOAD HERE >>>> https://drive.google.com/file/d/1NLdatZCM0RT6CPk5cJDzYbDlfhr1x4KA/view?usp=drive_link
-
-
-
-
 
 
 
