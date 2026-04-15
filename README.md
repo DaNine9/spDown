@@ -1,7 +1,7 @@
 # SpDown
 CLI for downloading Spotify <b>songs</b> and <b>playlists</b> in seconds through YouTube using Spotify API and yt_dlp library. <b>Perfect for DJs!</b>
 
-it also allows you to download from YouTube directly.
+It allows you to input a Spotify or YouTube URL or Song Name, and itll find the best yt video match to download automatically to your music folder.
 
 <img width="886" height="300" alt="Captura de pantalla 2026-03-17 133148" src="https://github.com/user-attachments/assets/986f437d-c539-4498-b6ad-5a647f4818e1" />
 
