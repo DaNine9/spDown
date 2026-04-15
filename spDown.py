@@ -3,6 +3,10 @@ import json
 import time
 import os
 import yt_dlp
+import subprocess
+
+spotifyClientId = ""
+SpotifyClientSecret = ""
 
 ascii_art = [
 "      _____       ____                    ",
@@ -19,10 +23,80 @@ end_color   = (100, 100, 255)
 #USER VARIABLES
 
 #path to ffmpeg binary
-ffmpeg_path = ""
-#spotify client info
-spotifyClientId = ""
-SpotifyClientSecret = ""
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ffmpeg_path = os.path.join(BASE_DIR, "ffmpeg.exe")
+
+def find_ffmpeg():
+    try:
+        subprocess.run(["ffmpeg", "-version"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return True  # it's in PATH
+    except FileNotFoundError:
+        return False
+
+def getToken():
+    
+    global token
+    print("Refreshing Token...")
+    print()
+    url = "https://accounts.spotify.com/api/token"
+    data = {
+        "grant_type": "client_credentials",
+        "client_id": spotifyClientId,
+        "client_secret": SpotifyClientSecret
+    }
+    headers = {
+        "Content-Type": "application/x-www-form-urlencoded"
+    }
+    response = requests.post(url, headers=headers, data=data)  
+    if response.status_code == 200:
+        data = response.json()
+        token = response.json()["access_token"]
+
+
+    else:
+        print("HTTP error:", response.status_code)
+        print(response.text) 
+
+        print()
+        promptSpData()
+
+
+def promptSpData():
+    global spotifyClientId, SpotifyClientSecret
+    
+    print("\033[91mSpotify API authentication required.\033[0m")
+    print("\033[91mHead to\033[0m https://developer.spotify.com/dashboard \033[91m to get a client ID and secret \033[0m")
+    print()
+
+    client_id = input("Client Id >>> ")
+    client_secret = input("Client Secret >>> ")
+    spotifyClientId = client_id
+    SpotifyClientSecret = client_secret
+
+
+
+    lines = [client_id, client_secret]
+    with open("spauth.txt", "w", encoding="utf-8") as f:
+        for line in lines:
+            f.write(line + "\n")
+
+    getToken()
+
+
+
+if os.path.exists("spauth.txt"):
+    
+    #spotify client info
+    with open("spauth.txt", "r", encoding="utf-8") as f:
+
+        spotifyClientId = f.readline().strip() 
+        SpotifyClientSecret = f.readline().strip() 
+
+        if(spotifyClientId == "" or SpotifyClientSecret == ""):
+            promptSpData() 
+
+else:
+    promptSpData()
 
 #path to the folder where the songs will be stored, where the path specified in the cli will be the subfolder (leave empty for no subfolder)
 rootDlPath = music_path = os.path.join(os.path.expanduser("~"), "Music") #MUSIC FOLDER, change this if you want to output to a different folder
@@ -45,10 +119,10 @@ def loop():
 
     ascii()
     print()
-    print("\033[38;2;100;100;255mInsert:\n     A Spotify track or playlist\n     A YouTube link\033[0m")
+    print("\033[38;2;100;100;255mInsert:\n     - A Spotify track or playlist\n     - A YouTube link\n     - A Song name\033[0m")
     print()
 
-    url = input(f"\033[38;2;100;100;255mInsert Url >>> \033[0m")
+    url = input(f"\033[38;2;100;100;255mInsert Url / Song Name >>> \033[0m")
     print()
     print("Tip: Path specifies the subfolder on which the output will be stored, leave empty to store in the root download folder")
     path = input(f"\033[38;2;100;100;255mInsert Path >>> \033[0m")
@@ -59,6 +133,8 @@ def loop():
         downloadYtUrl(url)
     elif "spotify" in url:
         getSpData(url)
+    else:
+        querySp(url)
 
     
         
@@ -82,6 +158,7 @@ def getToken():
     
     global token
     print("Refreshing Token...")
+    print()
     url = "https://accounts.spotify.com/api/token"
     data = {
         "grant_type": "client_credentials",
@@ -101,26 +178,55 @@ def getToken():
         print("HTTP error:", response.status_code)
         print(response.text) 
 
-def downloadYtUrl(url):
+        print()
+        promptSpData()
 
-    print("\033[31mYouTube Download...\033[0m")
-    print()
+
+def querySp(query):
+
+    global token
+
+    url = "https://api.spotify.com/v1/search"
+    headers = {"Authorization": f"Bearer {token}"}
+    params = {
+        "q": query,
+        "type": "track",
+        "limit": 1
+    }
+
+    response = requests.get(url, headers=headers, params=params)
+    data = response.json()
+
+    song = data["tracks"]["items"][0]
+
+
+    songLink = song["external_urls"]["spotify"]
+    authors = [artist["name"] for artist in song["artists"]]
+    authorsClean = ", ".join(authors)
+    album = song["album"]["name"]
+    name = song["name"]
+
+    print(f"Found Song: {name} : {authorsClean} ({album})")
+    query2 = f"{name} - {authorsClean} - topic"
+
+    downloadYt(query2, name, authorsClean, album, True)
+
+
+    
+
+
+
+
+
+def downloadYtUrl(url):
+    print("\033[31mYouTube Download...\033[0m\n")
 
     global path
-    
 
     if "&list" in url:
         url_clean = url.split("&list")[0]
     else:
         url_clean = url
-
-    # First extract metadata without downloading
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(url_clean, download=False)
-
-    title = info.get("title", "Unknown Title")
-    artist = info.get("uploader", "Unknown Artist")
-    album = info.get("channel", "YouTube")
 
     ydl_opts = {
         "ffmpeg_location": ffmpeg_path,
@@ -128,27 +234,25 @@ def downloadYtUrl(url):
         "outtmpl": fr"{rootDlPath}\{path}\%(title)s.%(ext)s",
         "quiet": True,
         "no_warnings": True,
-
         "postprocessors": [{
             "key": "FFmpegExtractAudio",
             "preferredcodec": "mp3",
             "preferredquality": "192",
         }],
-
-        "postprocessor_args": [
-            "-metadata", f"title={title}",
-            "-metadata", f"artist={artist}",
-            "-metadata", f"album={album}",
-        ],
     }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        ydl.download([url_clean])
+        info = ydl.extract_info(url_clean, download=True)
+        songFp = ydl.prepare_filename(info)
 
-    print(f"Downloaded: {title}")
-    print(f"Artist: {artist}")
+    # convert to mp3
+    songFp = os.path.splitext(songFp)[0] + ".mp3"
 
-def downloadYt(query, song,artist, album):
+    print(f"Downloaded: {info.get('title')}")
+
+    subprocess.run(['explorer', '/select,', songFp])
+
+def downloadYt(query, song,artist, album, showOnEnd):
 
     print("\033[31mYouTube Download...\033[0m")
     print()
@@ -183,6 +287,17 @@ def downloadYt(query, song,artist, album):
         video = info["entries"][0]
         print(f"Downloaded: {video['title']}")
         print(f"URL: {video['webpage_url']}")
+
+    if (showOnEnd == True):
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(f"ytsearch1:{query}", download=True)
+            video = info["entries"][0]
+
+            songFp = ydl.prepare_filename(video)
+
+        songFp = os.path.splitext(songFp)[0] + ".mp3"
+
+        subprocess.run(['explorer', '/select,', songFp])
 
 
 
@@ -241,7 +356,7 @@ def getSpData(url):
                 # build query
                 query = f"{name} - {artist} - topic"
 
-                downloadYt(query, name, artist, album)
+                downloadYt(query, name, artist, album, False)
 
         else:
             loop()
@@ -287,32 +402,15 @@ def getSongInfo(url):
             title = f"{song} - {artist} - topic"
 
 
-            downloadYt(title, song, artist, album)
+            downloadYt(title, song, artist, album, True)
     else:
         print("\033[31mThe token has expired, refreshing token...\033[0m")
         getSongInfo()
 
-def checkData():
-    d=0
-    if(ffmpeg_path == ""):
-        print("\033[31mPlease specify ffmpeg_path in spdown.py\033[0m")
-        d = 1
 
-    if(spotifyClientId == ""):
-        print("\033[31mPlease specify spotifyClientId in spdown.py\033[0m")
-        d = 1
-    if(SpotifyClientSecret == ""):
-        print("\033[31mPlease specify spotifyClientSecret in spdown.py\033[0m")         
-        d=1
-
-    if (d == 1):
-        input("Press enter")
-        exit() 
+            
 
 
-checkData()
 getToken()
-
-
 loop()
 
