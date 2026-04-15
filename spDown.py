@@ -4,6 +4,8 @@ import time
 import os
 import yt_dlp
 import subprocess
+import zipfile
+import sys
 
 spotifyClientId = ""
 SpotifyClientSecret = ""
@@ -23,15 +25,69 @@ end_color   = (100, 100, 255)
 #USER VARIABLES
 
 #path to ffmpeg binary
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-ffmpeg_path = os.path.join(BASE_DIR, "ffmpeg.exe")
+FFMPEG_DIR = r"C:\ffmpeg\ffmpeg-8.1-essentials_build\bin"
+FFMPEG_EXE = r"C:\ffmpeg\ffmpeg-8.1-essentials_build\bin\ffmpeg.exe"
+ZIP_PATH = r"C:\ffmpeg\ffmpeg.zip"
+
+ffmpeg_path = FFMPEG_EXE
 
 def find_ffmpeg():
-    try:
-        subprocess.run(["ffmpeg", "-version"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        return True  # it's in PATH
-    except FileNotFoundError:
-        return False
+    if os.path.exists(FFMPEG_EXE):
+        print("FFmpeg found")
+    else:
+        print("FFmpeg NOT found")
+        install_ffmpeg()
+
+
+
+def install_ffmpeg():
+    print("Installing FFmpeg to C:\\ffmpeg\\bin ...")
+
+    url = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
+
+    # make folders
+    os.makedirs(FFMPEG_DIR, exist_ok=True)
+
+    r = requests.get(url, stream=True)
+    total_size = int(r.headers.get('content-length', 0))
+    downloaded = 0
+    start_time = time.time()
+
+    with open(ZIP_PATH, "wb") as f:
+        for chunk in r.iter_content(chunk_size=8192):
+            if chunk:
+                f.write(chunk)
+                downloaded += len(chunk)
+
+                # progress %
+                percent = (downloaded / total_size * 100) if total_size else 0
+
+                # progress bar
+                bar_length = 30
+                filled = int(bar_length * downloaded // total_size) if total_size else 0
+                bar = "█" * filled + "-" * (bar_length - filled)
+
+                # speed (KB/s)
+                elapsed = time.time() - start_time
+                speed = (downloaded / 1024 / elapsed) if elapsed > 0 else 0
+
+                # print in one line
+                sys.stdout.write(f"\r[{bar}] {percent:.1f}% ({speed:.1f} KB/s)")
+                sys.stdout.flush()
+
+    print("\nDownload complete!")
+
+    print("Extracting...")
+
+    with zipfile.ZipFile(ZIP_PATH, "r") as zip_ref:
+        zip_ref.extractall(r"C:\ffmpeg")
+
+    print("Done!")
+
+
+
+find_ffmpeg()
+
 
 def getToken():
     
