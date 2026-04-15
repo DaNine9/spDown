@@ -293,7 +293,7 @@ def downloadYtUrl(url):
         "postprocessors": [{
             "key": "FFmpegExtractAudio",
             "preferredcodec": "mp3",
-            "preferredquality": "192",
+            "preferredquality": "320",
         }],
     }
 
@@ -327,7 +327,7 @@ def downloadYt(query, song,artist, album, showOnEnd):
         "postprocessors": [{
             "key": "FFmpegExtractAudio",
             "preferredcodec": "mp3",
-            "preferredquality": "192",
+            "preferredquality": "320",
         }],
 
         "postprocessor_args": [
